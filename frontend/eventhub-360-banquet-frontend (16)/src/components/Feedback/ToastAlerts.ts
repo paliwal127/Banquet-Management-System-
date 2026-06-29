@@ -1,5 +1,7 @@
 import { message, notification } from 'antd';
 
+const ENABLE_PUSH_ALERTS = false;
+
 // Custom style configurations to match EventHub 360 primary branding colors
 export const showToast = {
   success: (msg: string) => {
@@ -36,6 +38,8 @@ export const showToast = {
   },
   // Real-time alert notifications (drawer alerts)
   pushAlert: (title: string, desc: string, type: 'info' | 'success' | 'warning' | 'error' = 'warning') => {
+    if (!ENABLE_PUSH_ALERTS) return;
+
     notification[type]({
       message: title,
       description: desc,

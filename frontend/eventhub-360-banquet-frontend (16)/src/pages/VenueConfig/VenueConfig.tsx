@@ -6,7 +6,7 @@ import { SkeletonLoader } from '../../components/Common/SkeletonLoader';
 import { showToast } from '../../components/Feedback/ToastAlerts';
 import { useAuth } from '../../context/AuthContext';
 import { HasPermission } from '../../components/Auth/HasPermission';
-import { Card, Row, Col, Tag, Button, Modal, Input, Select, Checkbox } from 'antd';
+import { Card, Row, Col, Tag, Button, Modal, Input, Select, Checkbox, Upload } from 'antd';
 import { Plus, Wrench } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,7 +18,7 @@ const venueSchema = zod.object({
   locationType: zod.enum(['Indoor', 'Outdoor', 'Hybrid']),
   status: zod.enum(['Active', 'Maintenance']),
   features: zod.array(zod.string()).min(1, 'Select at least one feature'),
-  image: zod.string().url('Must be a valid image URL'),
+  image: zod.string().min(1, 'Please upload a photo for this venue'),
   maintenanceNote: zod.string().optional()
 });
 
@@ -28,11 +28,32 @@ export const VenueConfig: React.FC = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   
   // Filters State
   const [search, setSearch] = useState('');
   const [type, setType] = useState('All');
   const [status, setStatus] = useState('Any');
+
+  const getDefaultValues = (): VenueFormValues => ({
+    name: '',
+    maxCapacity: 200,
+    locationType: 'Indoor',
+    status: 'Active',
+    features: ['Fiber Wi-Fi'],
+    image: '',
+    maintenanceNote: ''
+  });
+
+  const getVenueFormValues = (venue?: Venue | null): VenueFormValues => ({
+    name: venue?.name || '',
+    maxCapacity: venue?.maxCapacity || 200,
+    locationType: venue?.locationType || 'Indoor',
+    status: venue?.status || 'Active',
+    features: venue?.features || ['Fiber Wi-Fi'],
+    image: venue?.image || '',
+    maintenanceNote: venue?.maintenanceNote || ''
+  });
 
   const { data: venuesRes, isLoading } = useQuery({
     queryKey: ['venues', search, type, status],
@@ -45,31 +66,66 @@ export const VenueConfig: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['venues'] });
       showToast.success('New venue space added successfully!');
-      setIsModalOpen(false);
-      reset();
+      handleCloseModal();
     },
     onError: (err: any) => {
       showToast.error(err.message || 'Failed to add venue');
     }
   });
 
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<VenueFormValues>({
-    resolver: zodResolver(venueSchema),
-    defaultValues: {
-      name: '',
-      maxCapacity: 200,
-      locationType: 'Indoor',
-      status: 'Active',
-      features: ['Fiber Wi-Fi'],
-      image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600',
-      maintenanceNote: ''
+  const updateVenueMutation = useMutation({
+    mutationFn: ({ id, updates, actor }: { id: string; updates: Partial<Venue>; actor: string }) =>
+      venueService.updateVenue(id, updates, actor),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['venues'] });
+      showToast.success('Venue updated successfully!');
+      handleCloseModal();
+    },
+    onError: (err: any) => {
+      showToast.error(err.message || 'Failed to update venue');
     }
   });
+
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<VenueFormValues>({
+    resolver: zodResolver(venueSchema),
+    defaultValues: getDefaultValues()
+  });
+
+  const openCreateModal = () => {
+    setSelectedVenue(null);
+    reset(getDefaultValues());
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (venue: Venue) => {
+    setSelectedVenue(venue);
+    reset(getVenueFormValues(venue));
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedVenue(null);
+    reset(getDefaultValues());
+  };
 
   const handleCreateVenue = (data: VenueFormValues) => {
     createVenueMutation.mutate({
       ...data,
       lastInspection: 'Just now'
+    });
+  };
+
+  const handleUpdateVenue = (data: VenueFormValues) => {
+    if (!selectedVenue) return;
+
+    updateVenueMutation.mutate({
+      id: selectedVenue.id,
+      updates: {
+        ...data,
+        lastInspection: selectedVenue.lastInspection || 'Just now'
+      },
+      actor: user?.username || 'Unknown'
     });
   };
 
@@ -88,7 +144,7 @@ export const VenueConfig: React.FC = () => {
         <HasPermission permission="manage_venues">
           <Button 
             type="primary" 
-            onClick={() => setIsModalOpen(true)}
+            onClick={openCreateModal}
             icon={<Plus size={16} />}
             style={{ backgroundColor: '#9e2a2b', borderColor: '#9e2a2b', borderRadius: '8px', height: '40px', fontWeight: 600 }}
           >
@@ -198,7 +254,7 @@ export const VenueConfig: React.FC = () => {
                     type="link" 
                     size="small" 
                     style={{ padding: 0, color: '#a8201a', fontWeight: 600 }}
-                    onClick={() => showToast.info(`Inspecting config for ${v.name}`)}
+                    onClick={() => openEditModal(v)}
                   >
                     Edit Config →
                   </Button>
@@ -212,7 +268,7 @@ export const VenueConfig: React.FC = () => {
             <Col xs={24} sm={12} md={8} lg={6}>
               <div 
                 className="add-space-card"
-                onClick={() => setIsModalOpen(true)}
+                onClick={openCreateModal}
               >
                 <div className="add-space-icon-wrapper">
                   <Plus size={32} color="#a8201a" />
@@ -227,13 +283,13 @@ export const VenueConfig: React.FC = () => {
 
       {/* Add Space Modal */}
       <Modal
-        title="Add New Venue Space"
+        title={selectedVenue ? 'Edit Venue Space' : 'Add New Venue Space'}
         open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={handleCloseModal}
         footer={null}
         width={560}
       >
-        <form onSubmit={handleSubmit(handleCreateVenue)} style={{ marginTop: '20px' }}>
+        <form onSubmit={handleSubmit(selectedVenue ? handleUpdateVenue : handleCreateVenue)} style={{ marginTop: '20px' }}>
           <div style={{ marginBottom: '16px' }}>
             <label className="form-label">Venue Name</label>
             <Controller
@@ -292,11 +348,41 @@ export const VenueConfig: React.FC = () => {
             </Col>
             <Col span={12}>
               <div style={{ marginBottom: '16px' }}>
-                <label className="form-label">Venue Photo URL</label>
+                <label className="form-label">Venue Photo</label>
                 <Controller
                   name="image"
                   control={control}
-                  render={({ field }) => <Input {...field} placeholder="https://unsplash.com/..." />}
+                  render={({ field }) => (
+                    <div>
+                      <Upload
+                        accept="image/*"
+                        showUploadList={false}
+                        beforeUpload={(file) => {
+                          const isImage = file.type.startsWith('image/');
+                          if (!isImage) {
+                            showToast.error('Please upload an image file.');
+                            return false;
+                          }
+
+                          const reader = new FileReader();
+                          reader.onload = () => field.onChange(reader.result as string);
+                          reader.readAsDataURL(file);
+                          return false;
+                        }}
+                      >
+                        <Button style={{ width: '100%' }}>Upload Saved Photo</Button>
+                      </Upload>
+                      {field.value ? (
+                        <div style={{ marginTop: '8px' }}>
+                          <img
+                            src={field.value}
+                            alt="Venue preview"
+                            style={{ width: '100%', maxHeight: '140px', objectFit: 'cover', borderRadius: '8px' }}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
                 />
                 {errors.image && <span className="form-error">{errors.image.message}</span>}
               </div>
@@ -335,14 +421,14 @@ export const VenueConfig: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-            <Button onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleCloseModal}>Cancel</Button>
             <Button 
               type="primary" 
               htmlType="submit"
-              loading={createVenueMutation.isPending}
+              loading={createVenueMutation.isPending || updateVenueMutation.isPending}
               style={{ backgroundColor: '#9e2a2b', borderColor: '#9e2a2b' }}
             >
-              Add Venue Space
+              {selectedVenue ? 'Save Changes' : 'Add Venue Space'}
             </Button>
           </div>
         </form>

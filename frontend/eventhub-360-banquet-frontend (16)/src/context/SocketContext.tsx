@@ -66,6 +66,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     if (!isConnected || !socket) return;
 
+    const ENABLE_SIMULATED_ALERTS = false;
+    if (!ENABLE_SIMULATED_ALERTS) return;
+
     // Simulate KOT status updates and bottleneck triggers every 30 seconds
     const interval = setInterval(() => {
       // Trigger live notifications
