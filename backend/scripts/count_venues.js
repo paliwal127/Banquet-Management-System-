@@ -1,0 +1,25 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  user: String(process.env.DB_USER || ''),
+  host: String(process.env.DB_HOST || ''),
+  database: String(process.env.DB_NAME || ''),
+  password: String(process.env.DB_PASSWORD || ''),
+  port: Number(process.env.DB_PORT) || 5432
+});
+
+const run = async () => {
+  try {
+    const res = await pool.query('SELECT COUNT(*)::int AS cnt FROM venues');
+    console.log('Total venues in DB:', res.rows[0].cnt);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    await pool.end();
+    process.exit(0);
+  }
+};
+
+run();
