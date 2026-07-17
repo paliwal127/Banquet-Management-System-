@@ -77,6 +77,208 @@ export const INITIAL_VENUES: Venue[] = [
   }
 ];
 
+const EVENT_TYPES = ['Wedding', 'Gala', 'Dinner', 'Brunch', 'Cocktail', 'Conference', 'Workshop', 'Team Offsite', 'Charity'];
+const CLIENT_NAMES = [
+  'Harmony Society',
+  'Maple Ridge Retreat',
+  'Optima Partners',
+  'Azure Innovations',
+  'Sapphire Events',
+  'Pearl Catering',
+  'Crescent Ventures',
+  'Luna Weddings',
+  'Meridian Summit',
+  'Golden Hour Productions',
+  'Silver Spoon Catering',
+  'Cedar Club Conference',
+  'Orchid Fashion Week',
+  'Titan Awards',
+  'Vanguard Expo',
+  'Echo Media Launch',
+  'Radiant Gala',
+  'Summit Healthcare Forum',
+  'Celeste Charity Ball',
+  'Aurora Product Reveal',
+  'Nexus Trade Fair',
+  'Legacy Philanthropy Gala',
+  'Granite Builders Banquet',
+  'Velvet Ballroom Showcase',
+  'Eclipse Film Premiere',
+  'Atlas Sports Dinner',
+  'Pearl Harbor Reception',
+  'Zenith VIP Experience',
+  'Cascade Awards Dinner',
+  'Orion Networking Brunch',
+  'Neptune Culinary Expo',
+  'Jade Conference',
+  'Opal Board Retreat',
+  'Crown Season Launch',
+  'Pinnacle Investor Meet',
+  'Solstice Cultural Evening',
+  'Mosaic Art Exhibit',
+  'Beacon Leadership Forum',
+  'Harbor Cruise Reception',
+  'Starlight Alumni Reunion',
+  'Ember Wine Tasting',
+  'Willow Garden Party',
+  'Sierra Adventure Kickoff',
+  'Horizon Wellness Retreat',
+  'Blossom Bridal Shower',
+  'Pulse Tech Demo',
+  'Vintage Car Club Dinner',
+  'Charity Casino Night',
+  'Infinity Strategy Summit',
+  'Lumen Health Symposium'
+];
+const BOOKING_STATUSES: BookingStatus[] = ['Inquiry', 'Tentative', 'Confirmed', 'BEO Draft', 'BEO Approved', 'In Progress', 'Completed', 'Archived', 'Blocked'];
+const PAYMENT_STATUSES: Booking['paymentStatus'][] = ['Unpaid', 'Deposit Paid', 'Fully Paid', 'Refunded', 'Overdue'];
+const BOOKING_NOTES = [
+  'Guest list finalized, welcome bags ordered.',
+  'Need vegetarian and vegan meal stations.',
+  'Soundcheck required before 18:00.',
+  'Client requested green centrepieces.',
+  'Separate VIP registration desk needed.',
+  'Bar menu includes gluten-free cocktails.',
+  'Additional AV technicians requested.',
+  'Outdoor heaters requested for terrace area.',
+  'Special dietary requests for 12 guests.',
+  'Bus parking required for guest shuttle.',
+  'Stage setup with LED wall required.',
+  'Photography zone reserved near entrance.',
+  'Client wants a late-night dessert station.',
+  'Aisle runner with gold trim requested.',
+  'Private lounge for sponsors.',
+  'Child care space requested by organizer.',
+  'Charity auction preview area required.',
+  'Wellness workshop equipment to be staged.',
+  'Welcome drinks served on arrival.',
+  'Floor decals for registration flow.'
+];
+const VENUE_INFO = [
+  { id: 'venue-1', name: 'Imperial Grand Ballroom' },
+  { id: 'venue-2', name: 'Zenith Sky Terrace' },
+  { id: 'venue-3', name: 'Royal Dining Wing' },
+  { id: 'venue-4', name: 'Emerald Pavilion' }
+];
+const TIME_SLOTS = [
+  { start: '09:00', end: '17:00' },
+  { start: '10:00', end: '16:00' },
+  { start: '12:00', end: '20:00' },
+  { start: '14:00', end: '22:00' },
+  { start: '18:00', end: '23:00' }
+];
+const EVENT_DURATION: Record<string, number> = {
+  Wedding: 1,
+  Gala: 1,
+  Dinner: 1,
+  Brunch: 1,
+  Cocktail: 1,
+  Conference: 2,
+  Workshop: 2,
+  'Team Offsite': 2,
+  Charity: 1
+};
+
+function pad(num: number): string {
+  return num.toString().padStart(2, '0');
+}
+
+function formatDate(date: Date): string {
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+}
+
+function createTimestamp(date: Date): string {
+  return date.toISOString();
+}
+
+function createLifecycleHistory(date: Date, status: BookingStatus): BookingLifecycleStep[] {
+  const history: BookingLifecycleStep[] = [
+    { status: 'Inquiry', actor: 'Sales Mgr', timestamp: createTimestamp(new Date(date.getTime() - 3 * 24 * 60 * 60 * 1000)), note: 'Initial inquiry received' }
+  ];
+
+  if (status !== 'Inquiry') {
+    history.push({ status: 'Tentative', actor: 'Sales Mgr', timestamp: createTimestamp(new Date(date.getTime() - 2 * 24 * 60 * 60 * 1000)), note: 'Tentative hold confirmed' });
+  }
+  if (['Confirmed', 'BEO Draft', 'BEO Approved', 'In Progress', 'Completed'].includes(status)) {
+    history.push({ status: 'Confirmed', actor: 'Sales Mgr', timestamp: createTimestamp(new Date(date.getTime() - 1 * 24 * 60 * 60 * 1000)), note: 'Contract signed, deposit secured' });
+  }
+  if (['BEO Draft', 'BEO Approved'].includes(status)) {
+    history.push({ status: 'BEO Draft', actor: 'Banquet Mgr', timestamp: createTimestamp(new Date(date.getTime() - 18 * 60 * 60 * 1000)), note: 'BEO draft created' });
+  }
+  if (status === 'BEO Approved') {
+    history.push({ status: 'BEO Approved', actor: 'Banquet Mgr', timestamp: createTimestamp(new Date(date.getTime() - 8 * 60 * 60 * 1000)), note: 'Final approvals completed' });
+  }
+  if (status === 'In Progress') {
+    history.push({ status: 'In Progress', actor: 'Ops Team', timestamp: createTimestamp(new Date(date.getTime() + 2 * 60 * 60 * 1000)), note: 'Venue setup started' });
+  }
+  if (status === 'Completed') {
+    history.push({ status: 'Completed', actor: 'Ops Team', timestamp: createTimestamp(new Date(date.getTime() + 8 * 60 * 60 * 1000)), note: 'Event successfully completed' });
+  }
+
+  return history;
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+const ADDITIONAL_BOOKINGS: Booking[] = Array.from({ length: 100 }, (_, offset) => {
+  const index = offset;
+  const eventType = EVENT_TYPES[index % EVENT_TYPES.length];
+  const venue = VENUE_INFO[index % VENUE_INFO.length];
+  const startDateObj = addDays(new Date(Date.UTC(2024, 8, 14)), index);
+  const endDateObj = addDays(startDateObj, (EVENT_DURATION[eventType] ?? 1) - 1);
+  const timeSlot = TIME_SLOTS[index % TIME_SLOTS.length];
+  const billingAmount = 8000 + ((index * 775) % 52000);
+  const depositRequired = Math.round(billingAmount * [0.25, 0.35, 0.45, 0.5, 0.75, 1][index % 6]);
+  const paymentStatus = PAYMENT_STATUSES[(index + 2) % PAYMENT_STATUSES.length];
+  const paidAmount = paymentStatus === 'Fully Paid'
+    ? billingAmount
+    : paymentStatus === 'Deposit Paid'
+      ? Math.round(depositRequired * 0.9)
+      : paymentStatus === 'Overdue'
+        ? Math.round(depositRequired * 0.45)
+        : paymentStatus === 'Refunded'
+          ? Math.round(depositRequired * 0.4)
+          : 0;
+  const refundedAmount = paymentStatus === 'Refunded' ? Math.round(billingAmount * 0.2) : 0;
+  const balanceDue = Math.max(0, billingAmount - paidAmount);
+  const bookingStatus = BOOKING_STATUSES[(index + 3) % BOOKING_STATUSES.length];
+  const createdAt = createTimestamp(new Date(Date.UTC(2026, 5, 18 + (index % 5), 8 + (index % 6), 10 * (index % 5), 0)));
+  const updatedAt = createTimestamp(new Date(Date.UTC(2026, 5, 18 + (index % 5), 9 + ((index + 1) % 6), 15 * ((index + 1) % 4), 0)));
+
+  return {
+    id: `booking-${index + 8}`,
+    clientName: CLIENT_NAMES[index % CLIENT_NAMES.length],
+    eventType,
+    guestCount: 50 + ((index * 23) % 900),
+    venueId: venue.id,
+    venueName: venue.name,
+    date: formatDate(startDateObj),
+    startDate: formatDate(startDateObj),
+    endDate: formatDate(endDateObj),
+    startTime: timeSlot.start,
+    endTime: timeSlot.end,
+    status: bookingStatus,
+    billingAmount,
+    paidAmount,
+    notes: BOOKING_NOTES[index % BOOKING_NOTES.length],
+    createdAt,
+    createdBy: index % 2 === 0 ? 'Sales Mgr' : 'Banquet Mgr',
+    updatedAt,
+    updatedBy: index % 2 === 0 ? 'Sales Mgr' : 'Banquet Mgr',
+    depositRequired,
+    depositReceived: paymentStatus === 'Fully Paid' ? depositRequired : Math.max(0, Math.min(depositRequired, paidAmount)),
+    balanceDue,
+    refundedAmount,
+    overdue: paymentStatus === 'Overdue',
+    paymentStatus,
+    lifecycleHistory: createLifecycleHistory(startDateObj, bookingStatus)
+  };
+});
+
 export const INITIAL_BOOKINGS: Booking[] = [
   {
     id: 'booking-1',
@@ -295,7 +497,8 @@ export const INITIAL_BOOKINGS: Booking[] = [
       { status: 'Tentative', actor: 'Sales Mgr', timestamp: '2026-06-16T10:00:00Z' },
       { status: 'Confirmed', actor: 'Sales Mgr', timestamp: '2026-06-17T11:00:00Z' }
     ]
-  }
+  },
+  ...ADDITIONAL_BOOKINGS
 ];
 
 export const INITIAL_MENU_ITEMS: MenuItem[] = [

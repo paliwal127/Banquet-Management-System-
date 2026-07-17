@@ -5,7 +5,7 @@ import { showToast } from '../components/Feedback/ToastAlerts';
 
 // Global Axios Configuration
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 10000,
 });
 
@@ -852,7 +852,7 @@ export const taskService = {
 // ==========================================
 
 export const apiV1 = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 10000,
 });
 
@@ -878,7 +878,7 @@ export interface HallAvailability {
 
 export const availabilityService = {
   getAvailability: async (date: string): Promise<ApiResponse<HallAvailability[]>> => {
-    return apiV1.get(`/banquet/availability?date=${date}`);
+    return apiV1.get(`/availability?date=${encodeURIComponent(date)}`);
   }
 };
 

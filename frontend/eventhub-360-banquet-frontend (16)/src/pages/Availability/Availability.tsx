@@ -41,23 +41,19 @@ export const Availability: React.FC = () => {
 
   React.useEffect(() => {
     const fetchHalls = async () => {
-      const url = `http://localhost:5000/api/v1/banquet/availability?date=${quickDate}`;
-      console.log("Calling availability API:", url);
       try {
-        const response = await fetch(url);
-        const data = await response.json();
-        console.log("Availability response:", data);
-        if (data && data.success && Array.isArray(data.data)) {
-          setLiveHalls(data.data);
-          
-          // Auto-select first hall if current one is not in the live list
-          const hallIds = data.data.map((h: any) => String(h.hall_id));
-          if (data.data.length > 0 && !hallIds.includes(quickVenueId)) {
-            setQuickVenueId(String(data.data[0].hall_id));
-            setQuickVenueName(data.data[0].name);
+        const response = await availabilityService.getAvailability(quickDate);
+
+        if (response && response.success && Array.isArray(response.data)) {
+          setLiveHalls(response.data);
+
+          const hallIds = response.data.map((h: any) => String(h.hall_id));
+          if (response.data.length > 0 && !hallIds.includes(quickVenueId)) {
+            setQuickVenueId(String(response.data[0].hall_id));
+            setQuickVenueName(response.data[0].name);
           }
         } else {
-          showToast.error(data.message || 'Failed to check availability.');
+          showToast.error(response.message || 'Failed to check availability.');
         }
       } catch (err: any) {
         console.error("Banquet API connection error:", err);
