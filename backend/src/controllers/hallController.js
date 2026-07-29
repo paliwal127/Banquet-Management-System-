@@ -48,5 +48,6 @@ const addHall = async (req,res) => {
 
 module.exports = {
   getHalls,
-  addHall
+  addHall,
 };
+
